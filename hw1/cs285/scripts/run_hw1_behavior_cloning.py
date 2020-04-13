@@ -1,5 +1,6 @@
 import os
 import time
+import argparse
 import numpy as np
 import tensorflow as tf
 
@@ -17,7 +18,7 @@ class BC_Trainer(object):
 
         agent_params = {
             'n_layers': params['n_layers'],
-            'size': params['size'],
+            'size': params['size'], ##type=int
             'learning_rate': params['learning_rate'],
             'max_replay_buffer_size': params['max_replay_buffer_size'],
             }
@@ -53,7 +54,7 @@ class BC_Trainer(object):
 
 
 def main():
-    import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--expert_policy_file', '-epf', type=str, required=True)  # relative to where you're running this script from
     parser.add_argument('--expert_data', '-ed', type=str, required=True) #relative to where you're running this script from

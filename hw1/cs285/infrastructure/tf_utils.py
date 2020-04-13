@@ -24,10 +24,11 @@ def build_mlp(input_placeholder, output_size, scope, n_layers, size, activation=
             output_placeholder: the result of a forward pass through the hidden layers + the output layer
     """
     output_placeholder = input_placeholder
+    # HINT: use tf.layers.dense (specify <input>, <size>, activation=<?>)
     with tf.variable_scope(scope):
         for _ in range(n_layers):
-            output_placeholder = TODO # HINT: use tf.layers.dense (specify <input>, <size>, activation=<?>)
-        output_placeholder = TODO # HINT: use tf.layers.dense (specify <input>, <size>, activation=<?>)
+            output_placeholder = tf.layers.dense(output_placeholder, size, activation=activation) 
+        output_placeholder = tf.layers.dense(output_placeholder, output_size, activation=activation) 
     return output_placeholder
 
 

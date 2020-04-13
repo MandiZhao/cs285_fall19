@@ -5,23 +5,17 @@ import time
 ############################################
 
 def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('rgb_array')):
-
     # initialize env for the beginning of a new rollout
-    ob = TODO # TODO: GETTHIS from HW1
-
+    ob = env.reset() # HINT: should be the output of resetting the env
     # init vars
     obs, acs, rewards, next_obs, terminals, image_obs = [], [], [], [], [], []
     steps = 0
     while True:
-
         # render image of the simulated env
         if render:
             if 'rgb_array' in render_mode:
                 if hasattr(env, 'sim'):
-                    if 'track' in env.env.model.camera_names:
-                        image_obs.append(env.sim.render(camera_name='track', height=500, width=500)[::-1])
-                    else:
-                        image_obs.append(env.sim.render(height=500, width=500)[::-1])
+                    image_obs.append(env.sim.render(camera_name='track', height=500, width=500)[::-1])
                 else:
                     image_obs.append(env.render(mode=render_mode))
             if 'human' in render_mode:
@@ -30,7 +24,7 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
 
         # use the most recent ob to decide what to do
         obs.append(ob)
-        ac = TODO # TODO: GETTHIS from HW1
+        ac = policy.get_action(ob) # HINT: query the policy's get_action function
         ac = ac[0]
         acs.append(ac)
 
@@ -42,26 +36,33 @@ def sample_trajectory(env, policy, max_path_length, render=False, render_mode=('
         next_obs.append(ob)
         rewards.append(rew)
 
-        # End the rollout if the rollout ended 
-        # Note that the rollout can end due to done, or due to max_path_length
-        rollout_done = TODO # TODO: GETTHIS from HW1
+        if done or steps == max_path_length:
+            rollout_done = 1
+        else:
+            rollout_done = 0 
         terminals.append(rollout_done)
         
         if rollout_done: 
             break
 
     return Path(obs, image_obs, acs, rewards, next_obs, terminals)
+ 
 
 def sample_trajectories(env, policy, min_timesteps_per_batch, max_path_length, render=False, render_mode=('rgb_array')):
+    timesteps_this_batch = 0
+    paths = []
 
-    # TODO: GETTHIS from HW1
+    while timesteps_this_batch < min_timesteps_per_batch:
+        path = sample_trajectory(env, policy, max_path_length, render, render_mode)
+        timesteps_this_batch += get_pathlength(path)
+        paths.append(path)
 
     return paths, timesteps_this_batch
 
 def sample_n_trajectories(env, policy, ntraj, max_path_length, render=False, render_mode=('rgb_array')):
-    
-    # TODO: GETTHIS from HW1
-
+    paths = []
+    for _ in range(ntraj):
+        paths.append(sample_trajectory(env, policy, max_path_length, render, render_mode))
     return paths
 
 ############################################
