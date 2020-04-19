@@ -40,7 +40,7 @@ class PGAgent(BaseAgent):
 
         """
             Training a PG agent refers to updating its actor using the given observations/actions
-            and the calculated qvals/advantages that come from the seen rewards.
+            and the calculated Qvals/advantages that come from the seen rewards.
 
             ---------------------------------------------------------------------------------- 
             
@@ -52,7 +52,7 @@ class PGAgent(BaseAgent):
                 tau=(s_0, a_0, s_1, a_1, s_2, a_2, ...) is a trajectory,
                 Q_t is the Q-value at time t, Q^{pi}(s_t, a_t),
                 b_t is a baseline which may depend on s_t,
-                and (Q_t - b_t ) is the advantage.
+                and (Q_t - b_t) is the advantage.
 
             Thus, the PG update performed by the actor needs (s_t, a_t, q_t, adv_t),
                 and that is exactly what this function provides.
@@ -70,7 +70,7 @@ class PGAgent(BaseAgent):
         # step 3:
         # TODO: pass the calculated values above into the actor/policy's update, 
         # which will perform the actual PG update step
-        loss = self.actor.update(obs, acs, qvals=TODO, adv_n=TODO)
+        loss = self.actor.update(obs, acs, qvals=q_values, adv_n=advantage_values)
         return loss
 
     def calculate_q_vals(self, rews_list):
@@ -95,9 +95,10 @@ class PGAgent(BaseAgent):
             
             # TODO: Estimate the Q value Q^{pi}(s_t, a_t) using rewards from that entire trajectory
             # HINT1: value of each point (t) = total discounted reward summed over the entire trajectory (from 0 to T-1)
-                # In other words, q(s_t, a_t) = sum_{t'=0}^{T-1} gamma^t' r_{t'}
+                # In other words, q(s_t, a_t) = sum_{t'=0}^{T-1} gamma^t' r_{t'} 
+                # *** same val at all t!
             # Hint3: see the helper functions at the bottom of this file
-            q_values = np.concatenate([TODO for r in rews_list])
+            q_values = np.concatenate([self._discounted_return(r) for r in rews_list])
 
         # Case 2: reward-to-go PG 
         else:
@@ -106,7 +107,7 @@ class PGAgent(BaseAgent):
             # HINT1: value of each point (t) = total discounted reward summed over the remainder of that trajectory (from t to T-1)
                 # In other words, q(s_t, a_t) = sum_{t'=t}^{T-1} gamma^(t'-t) * r_{t'}
             # Hint3: see the helper functions at the bottom of this file
-            q_values = np.concatenate([TODO for r in rews_list])
+            q_values = np.concatenate([self._discounted_cumsum(r) for r in rews_list])
 
         return q_values
 
@@ -119,11 +120,11 @@ class PGAgent(BaseAgent):
         # TODO: Estimate the advantage when nn_baseline is True
         # HINT1: pass obs into the neural network that you're using to learn the baseline
             # extra hint if you're stuck: see your actor's run_baseline_prediction
-        # HINT2: advantage should be [Q-b]
+        # HINT2: advantage should be (Q - b)
         if self.nn_baseline:
-            b_n_unnormalized = TODO
+            b_n_unnormalized = self.actor.run_baseline_prediction(obs)
             b_n = b_n_unnormalized * np.std(q_values) + np.mean(q_values)
-            adv_n = TODO
+            adv_n = q_values - b_n
 
         # Else, just set the advantage to [Q]
         else:
@@ -161,23 +162,23 @@ class PGAgent(BaseAgent):
         """
 
         # 1) create a list of indices (t'): from 0 to T-1
-        indices = TODO
+        indices = np.arange(len(rewards))
 
         # 2) create a list where the entry at each index (t') is gamma^(t')
-        discounts = TODO
+        discounts = np.power(self.gamma, indices)
 
         # 3) create a list where the entry at each index (t') is gamma^(t') * r_{t'}
-        discounted_rewards = TODO
+        discounted_rewards = discounts * np.array(rewards)
 
         # 4) calculate a scalar: sum_{t'=0}^{T-1} gamma^(t') * r_{t'}
-        sum_of_discounted_rewards = TODO
+        sum_of_discounted_rewards = np.sum(discounted_rewards)
 
         # 5) create a list of length T-1, where each entry t contains that scalar
-        list_of_discounted_returns = TODO
+        list_of_discounted_returns = sum_of_discounted_rewards * np.ones(len(rewards))
 
         return list_of_discounted_returns
 
-    def _discounted_cumsum(self, rewards):
+    def _discounted_cumsum(self, rewards): ## discounted rew-to-go
         """
             Input:
                 a list of length T 
@@ -193,17 +194,17 @@ class PGAgent(BaseAgent):
         for start_time_index in range(len(rewards)): 
 
             # 1) create a list of indices (t'): goes from t to T-1
-            indices = TODO
+            indices = [i for i in range(start_time_index, len(rewards))] ## len==T-t
 
             # 2) create a list where the entry at each index (t') is gamma^(t'-t)
-            discounts = TODO
+            discounts = [self.gamma ** (i - start_time_index) for i in indices] ## len==T-t
 
             # 3) create a list where the entry at each index (t') is gamma^(t'-t) * r_{t'}
             # Hint: remember that t' goes from t to T-1, so you should use the rewards from those indices as well
-            discounted_rtg = TODO
+            discounted_rtg =  [ rewards[i] * dis for i, dis in zip(indices, discounts) ]
 
             # 4) calculate a scalar: sum_{t'=t}^{T-1} gamma^(t'-t) * r_{t'}
-            sum_discounted_rtg = TODO
+            sum_discounted_rtg = sum(discounted_rtg)
 
             # appending each of these calculated sums into the list to return
             all_discounted_cumsums.append(sum_discounted_rtg)
